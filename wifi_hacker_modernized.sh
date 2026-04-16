@@ -75,7 +75,27 @@ CREATE TABLE IF NOT EXISTS networks (
 # NETWORK CONTROL
 ############################################
 restart_network(){
-    systemctl restart NetworkManager || service NetworkManager restart
+    log "Restarting network service..."
+
+    if command -v systemctl &>/dev/null; then
+        if systemctl list-unit-files | grep -q '^NetworkManager\.service'; then
+            systemctl restart NetworkManager && return
+        fi
+        if systemctl list-unit-files | grep -q '^systemd-networkd\.service'; then
+            systemctl restart systemd-networkd && return
+        fi
+    fi
+
+    if command -v service &>/dev/null; then
+        if service --status-all 2>/dev/null | grep -q "networking"; then
+            service networking restart && return
+        fi
+        if service --status-all 2>/dev/null | grep -q "NetworkManager"; then
+            service NetworkManager restart && return
+        fi
+    fi
+
+    warn "No supported network service found. You may need to reconnect manually."
 }
 
 ############################################
